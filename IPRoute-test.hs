@@ -10,3 +10,5 @@ main = do
     print ("physicalInterfaces",physicalInterfaces)
     unnumberedInterfaces <- getUnnumberedInterfaces
     print ("unnumberedInterfaces",unnumberedInterfaces)
+    arpTable <- getARPTable
+    print ("arpTable",arpTable)

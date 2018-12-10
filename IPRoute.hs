@@ -1,6 +1,19 @@
 module IPRoute where
 import System.Process
-import Data.List((\\))
+import Data.List(sortOn,(\\))
+import Data.IP
+import qualified Data.Maybe
+
+getARPTable :: IO [(String,[IPv4])]
+getARPTable = do
+    rawNeighbours <- readProcess "ip" ["neigh"] ""
+    let parseNeighbours s = if "lladdr" == (parts !! 3) then Just (parts !! 2, read $ head parts :: IPv4) else Nothing where
+            parts = words s
+        neighbours = Data.Maybe.mapMaybe parseNeighbours ( lines rawNeighbours )
+        table = aggregate neighbours
+    print neighbours
+    print table
+    return []
 
 getNumberedInterfaces :: IO [String]
 getNumberedInterfaces = fmap (map  ( head . words ) . lines ) $ readProcess "ip" ["-4" , "-br" , "addr"] "" 
@@ -30,3 +43,11 @@ breakOn c = breakOn' (c ==) where
     breakOn' _ [] = []
     breakOn' p a | p (head a) = breakOn' p (tail a)
                  | otherwise = takeWhile (not . p) a : breakOn' p (dropWhile (not . p) a)
+
+aggregate :: Eq a => [(a,b)] -> [(a,[b])]
+aggregate = agg0 . Data.List.sortOn fst where
+    agg0 [] = []
+    agg0 ((a,b):z) = agg [(a,[b])] z
+    agg a [] = a
+    agg ( (a,[bx]) : c ) ((a0,b0) : z ) | a == a0   = agg ( (a,[b0:bx]) : c ) z
+                                        | otherwise = agg ( (a0,[b0]) : (a,[bx]) : c ) z 
