@@ -8,3 +8,5 @@ main = do
     print ("interfaces",interfaces)
     physicalInterfaces <- getPhysicalInterfaces
     print ("physicalInterfaces",physicalInterfaces)
+    unnumberedInterfaces <- getUnnumberedInterfaces
+    print ("unnumberedInterfaces",unnumberedInterfaces)

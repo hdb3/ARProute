@@ -1,5 +1,6 @@
 module IPRoute where
 import System.Process
+import Data.List((\\))
 
 getNumberedInterfaces :: IO [String]
 getNumberedInterfaces = fmap (map  ( head . words ) . lines ) $ readProcess "ip" ["-4" , "-br" , "addr"] "" 
@@ -15,7 +16,14 @@ getPhysicalInterfaces = do
     -- filter: 1) on number of 'lines' on an interface detail - simple interfaces don't additional lines to specify the sub-type such as bridge / macvtab / tun / etc
     --         2) to remove the loopback interface and any other odd ones other than real ethernet...
     -- then finally trim down the output to just field #2 line 1 which is the interface name (lots else available e.g. MAC, ifindex, state, but it is not needed so for simplicity just do this only)
-    return $ fmap (  ( !! 1) . head ) $ filter (( "link/ether" == ) . head . ( !! 1 ) ) $ filter ( (3 > ) . length ) interfaceDetails
+    -- and finally finally, remove the trailing ':' from the filed name
+    return $ fmap (  init . ( !! 1) . head ) $ filter (( "link/ether" == ) . head . ( !! 1 ) ) $ filter ( (3 > ) . length ) interfaceDetails
+
+getUnnumberedInterfaces :: IO [String]
+getUnnumberedInterfaces = do 
+    physical <- getPhysicalInterfaces
+    numbered <- getNumberedInterfaces
+    return $ physical \\ numbered
 
 breakOn :: Eq a => a -> [a] -> [[a]]
 breakOn c = breakOn' (c ==) where
