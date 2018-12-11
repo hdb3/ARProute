@@ -17,9 +17,13 @@ main = do
     putStrLn "\nunnumbered interface ARP table\n  ------"
     let unnumberedARP = map (\dev -> lookup dev arpTable) unnumberedInterfaces
     print unnumberedARP
-    mapM_ processUnnumberedInterface unnumberedInterfaces
+    loopbackAddress <- getLoopbackAddress
+    maybe (putStrLn "no loopback address found")
+          ( \lb -> mapM_ ( processUnnumberedInterface lb) unnumberedInterfaces )
+          loopbackAddress
 
-processUnnumberedInterface dev = do
+processUnnumberedInterface lb dev = do
+    putStrLn $ "processUnnumberedInterface - loopback address advertised: " ++ show lb
     routes <- getDevARPTable dev
     putStrLn $ "processUnnumberedInterface: " ++ show dev ++ " - " ++ show routes
     mapM_ (addHostRoute dev) routes

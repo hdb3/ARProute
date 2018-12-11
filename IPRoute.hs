@@ -42,6 +42,12 @@ getARPTable = do
     return table
 -}
 
+getLoopbackAddress :: IO (Maybe IPv4)
+getLoopbackAddress = do
+    raw <- readProcess "ip" ["-4" , "-br" , "address" , "show" , "dev" , "lo"] ""
+    let raw' = words raw
+    return $ if 3 > (length raw') then Nothing else Just (read $ takeWhile ('/' /=) $ raw' !! 3)  
+
 getNumberedInterfaces :: IO [String]
 getNumberedInterfaces = fmap (map  ( head . words ) . lines ) $ readProcess "ip" ["-4" , "-br" , "addr"] "" 
 
