@@ -1,10 +1,11 @@
 module IPRoute where
 import System.Process
-import Data.List(sortOn,(\\))
+import Data.List(intersect,sortOn,(\\))
 import Data.Ord(comparing)
 import Data.IP
 import qualified Data.Maybe
-import Control.Monad(void)
+import Control.Monad(when,void)
+import System.Exit
 import Util
 
 addHostRoute :: String -> IPv4 -> IO()
@@ -31,6 +32,18 @@ getARPTable_ = do
     neighbours <- getARPTable
     return $ aggregatePairs fst neighbours
 
+unsolicitedARP :: String -> IPv4 -> IO()
+unsolicitedARP dev ip = do
+    putStrLn $ "arping -A -c 3 -I " ++ dev ++ " -s " ++ show ip ++ " 0.0.0.0"
+    void $ readProcess "arping" ["-A" , "-c" , "3" , "-I" , dev , "-s" , show ip , "0.0.0.0"] ""
+
+interfaceUp :: String -> IO()
+interfaceUp dev = do
+    void $ readProcess "ip" ["link" , "set" , "up" , "dev" , dev ] ""
+
+arpAccept :: IO()
+arpAccept = callCommand "echo -n 1 > /proc/sys/net/ipv4/conf/all/arp_accept"
+
 {-
 getARPTable :: IO [(String,[IPv4])]
 getARPTable = do
@@ -41,6 +54,23 @@ getARPTable = do
         table = aggregatePairs fst neighbours
     return table
 -}
+
+getLocalAddress :: IO IPv4
+getLocalAddress = do
+    interfaces <- getPhysicalNumberedInterfaces
+    firstAddress <- getFirstAddress (head interfaces)
+    return firstAddress
+
+getFirstAddress :: String -> IO IPv4
+getFirstAddress dev = do
+    raw <- readProcess "ip" ["-4" , "-br" , "address" , "show" , "dev" , dev] ""
+    return $ read $ takeWhile ('/' /=) $ (words raw) !! 2
+
+setLoopbackAddress :: IPv4 -> IO ()
+setLoopbackAddress ip = do
+    -- void $ readProcess "ip" ["-4" , "address" , "add" , show ip , "dev" , "lo"] ""
+    (ec,out,err) <- readProcessWithExitCode "ip" ["-4" , "address" , "add" , show ip , "dev" , "lo"] ""
+    when (ExitSuccess /= ec) (putStrLn $ "setLoopbackAddress - warning: " ++ show (ec,out,err))
 
 getLoopbackAddress :: IO (Maybe IPv4)
 getLoopbackAddress = do
@@ -70,3 +100,9 @@ getUnnumberedInterfaces = do
     physical <- getPhysicalInterfaces
     numbered <- getNumberedInterfaces
     return $ physical \\ numbered
+
+getPhysicalNumberedInterfaces :: IO [String]
+getPhysicalNumberedInterfaces = do 
+    physical <- getPhysicalInterfaces
+    numbered <- getNumberedInterfaces
+    return $ physical `intersect` numbered
