@@ -4,8 +4,34 @@ import Data.List(sortOn,(\\))
 import Data.Ord(comparing)
 import Data.IP
 import qualified Data.Maybe
+import Control.Monad(void)
 import Util
 
+addHostRoute :: String -> IPv4 -> IO()
+addHostRoute dev ip = do
+    let route = show ip ++ "/32"
+    putStrLn $ "ip route replace " ++ route ++ " dev " ++ dev
+    void $ readProcess "ip" ["route" , "replace" , route , "dev" , dev ] ""
+
+
+getARPTable :: IO [(String,IPv4)]
+getARPTable = do
+    rawNeighbours <- readProcess "ip" ["neigh"] ""
+    let parseNeighbours s = if "lladdr" == (parts !! 3) then Just (parts !! 2, read $ head parts :: IPv4) else Nothing where
+            parts = words s
+    return $ Data.Maybe.mapMaybe parseNeighbours ( lines rawNeighbours )
+
+getDevARPTable :: String -> IO [IPv4]
+getDevARPTable dev = do
+    neighbours <- getARPTable
+    return $ map snd $ filter ( (dev ==) . fst) neighbours
+
+getARPTable_ :: IO [(String,[IPv4])]
+getARPTable_ = do
+    neighbours <- getARPTable
+    return $ aggregatePairs fst neighbours
+
+{-
 getARPTable :: IO [(String,[IPv4])]
 getARPTable = do
     rawNeighbours <- readProcess "ip" ["neigh"] ""
@@ -14,6 +40,7 @@ getARPTable = do
         neighbours = Data.Maybe.mapMaybe parseNeighbours ( lines rawNeighbours )
         table = aggregatePairs fst neighbours
     return table
+-}
 
 getNumberedInterfaces :: IO [String]
 getNumberedInterfaces = fmap (map  ( head . words ) . lines ) $ readProcess "ip" ["-4" , "-br" , "addr"] "" 
