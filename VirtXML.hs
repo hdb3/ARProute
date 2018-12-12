@@ -1,9 +1,10 @@
 module VirtXML where
 import Text.XML.Light
 import Data.Maybe
-import qualified Data.ByteString
+--import qualified Data.ByteString
 
-getDirectInterfaceData :: Data.ByteString.ByteString -> Maybe (String, String, String)
+--getDirectInterfaceData :: Data.ByteString.ByteString -> Maybe (String, String, String)
+getDirectInterfaceData :: String -> Maybe (String, String, String)
 getDirectInterfaceData c = if 0 < length directInterfaces then Just (mac direct , name direct , source direct) else Nothing where
     g = head $ onlyElems $ parseXML c
     pDirect = ( "direct" == ) . fromJust . findAttr ( QName "type" Nothing Nothing )
