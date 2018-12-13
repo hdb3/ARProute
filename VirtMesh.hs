@@ -3,13 +3,14 @@ import System.Process
 -- import System.Environment
 import VirtXML
 
-link h1 h2 = let cmdVeth   = "ip link add dev " ++ h1 ++ " type veth peer name " ++ h2
-                 cmdVirsh1 = "virsh attach-interface " ++ h1 ++ " direct " ++ h1 ++ "-" ++ h2 ++ " --target=macvtap --model virtio" 
-                 cmdVirsh2 = "virsh attach-interface " ++ h2 ++ " direct " ++ h2 ++ "-" ++ h1 ++ " --target=macvtap --model virtio" 
-             in unlines $ [cmdVeth,cmdVirsh1,cmdVirsh1]
+link h1 h2 = let h1h2 = h1 ++ "-" ++ h2
+                 h2h1 = h2 ++ "-" ++ h1
+                 cmdVeth   = "ip link add dev " ++ h1h2 ++ " type veth peer name " ++ h2h1
+                 cmdVirsh h veth = "virsh attach-interface " ++ h ++ " direct " ++ veth ++ " --target=macvtap --model virtio" 
+             in unlines $ [cmdVeth, cmdVirsh h1 h1h2, cmdVirsh h2 h2h1]
 
 unlink (h1,mac1) (h2,mac2) =
-     let cmdVeth = "ip link del dev " ++ h1
+     let cmdVeth = "ip link del dev " ++ h1 ++ "-" ++ h2
          cmdVirsh h mac = "virsh detach-interface " ++ h ++ " direct " ++ mac
      in unlines $ [cmdVirsh h1 mac1,cmdVirsh h2 mac2,cmdVeth]
 

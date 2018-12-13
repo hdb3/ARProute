@@ -22,6 +22,9 @@ getARPTable = do
             parts = words s
     return $ Data.Maybe.mapMaybe parseNeighbours ( lines rawNeighbours )
 
+getDevRoutes :: String -> IO [IPv4]
+getDevRoutes dev = fmap (map  ( read . head . words ) . lines ) $ readProcess "ip" ["-4" , "-br" , "route", "show", "dev", dev] "" 
+
 getDevARPTable :: String -> IO [IPv4]
 getDevARPTable dev = do
     neighbours <- getARPTable
