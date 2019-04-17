@@ -1,9 +1,9 @@
 # ARProute
 bindings for some of the functions available in iproute2
 
-additionally, ARP transmission via arpping
+additionally, ARP routing via arpping
 
-the purpose is to allow routing over unnumbered network interfaces, using host loopback addresses
+the purpose is to enable routed connectivity over unnumbered network interfaces, using host loopback addresses
 
 this simplifies configuration in complex virtual topologies
 
