@@ -12,9 +12,9 @@ We wish to enable virtualised routers to communicate without prior topology spec
 Typically this requires connectivity to addresses which are not on shared subnets, and thus must be 'routed', either over a default interface or a specifically chosen one.
 This project enable routers with interfaces which share a  layer 2 broadcast channel to discover and utilise those paths to communicate without manual configuration.
 ## Usage
-###Client
+### Client
 Run ARProuter as a daemon on clients, having previously defined a unique loopback address (ip addr add x.x.x.x/32 dev lo).
-##Host
+### Host
 In the host environment Mesh takes a list of VMs and generates scripts which will create and attach virtual point to point links between the given VMs.  The scripts use a combination of _virsh_ and _ip route_ CLI commands.  Mesh also generates the commands required to undo the configuration which it defines.
 ## Architecture
 ARProuter clients run the application ARProuter as a daemon.  ARProuter performs two roles: talker and listener.  As talker it send periodic ARP advertisements of its own loopback address.  As listener it discovers  advertised routes from other peer ARProuter broadcasts, and installs routes to these peers in the L3 route table.
