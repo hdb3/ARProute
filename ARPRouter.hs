@@ -3,6 +3,7 @@ import IPRoute
 import Control.Monad(mapM_)
 import Control.Concurrent
 import Data.List((\\),intersect)
+import qualified Data.IP
 
 setLoopback = True
 main = do 
@@ -10,6 +11,7 @@ main = do
     print ("numberedInterfaces",numberedInterfaces)
     interfaces <- getAllInterfaces
     print ("interfaces",interfaces)
+    let nonLoopbackInterfaces = filter ( "lo" /= ) interfaces
     physicalInterfaces <- getPhysicalInterfaces
     print ("physicalInterfaces",physicalInterfaces)
     unnumberedInterfaces <- getUnnumberedInterfaces
@@ -17,50 +19,39 @@ main = do
     arpTable <- getARPTable_
     print ("arpTable",arpTable)
 
-    putStrLn "\nunnumbered interface ARP table\n  ------"
-    let unnumberedARP = map (\dev -> lookup dev arpTable) unnumberedInterfaces
-    print unnumberedARP
     arpAccept
-    loopbackAddress <- getLoopbackAddress
-    if setLoopback then do
-        local <- getLocalAddress
-        let lb = makeLoopbackAddress local
-        putStrLn $ "using local address " ++ show local ++ "to generate loopback address"
-        putStrLn $ "set loopback to " ++ show lb
-        setLoopbackAddress lb
-        mapM_ ( processUnnumberedInterface lb) unnumberedInterfaces
-    else maybe (putStrLn "no loopback address found")
-               ( \lb -> mapM_ ( processUnnumberedInterface lb) unnumberedInterfaces )
-               loopbackAddress
-    let stall = do threadDelay 1000000
-                   stall
+    loopbackAddresses <- getLoopbackAddresses
+    putStrLn $ "advertising " ++ show loopbackAddresses ++ " on " ++ show nonLoopbackInterfaces
+    mapM_ ( processInterface loopbackAddresses) nonLoopbackInterfaces
     stall
 
-processUnnumberedInterface lb dev = do
-    putStrLn $ "processUnnumberedInterface - loopback address advertised: " ++ show lb
+    where
+    stall = threadDelay 1000000 >> stall
+
+processInterface :: [ Data.IP.IPv4 ] -> String -> IO ThreadId
+processInterface addrs dev = do
+    putStrLn $ "processInterface - loopback address advertised: " ++ show addrs
     interfaceUp dev
-    forkIO (arpDaemon lb dev)
-    forkIO (processUnnumberedInterface' lb dev)
+    forkIO (arpDaemon addrs dev)
+    forkIO (processInterface' addrs dev)
 
-arpDaemon lb dev = do
-    unsolicitedARP dev lb
-    threadDelay 10000000
-    arpDaemon lb dev
+    where
 
-processUnnumberedInterface' lb dev = do
-    routes <- getDevARPTable dev
-    devRoutes <- getDevRoutes dev
-    let missingRoutes = routes \\ devRoutes
-        matchingRoutes = routes `intersect` devRoutes
-    putStrLn $ "processUnnumberedInterface: " ++ show dev ++ " - " ++ show routes
-    mapM_ (addHostRoute dev) missingRoutes
-    if null matchingRoutes then do
-        putStrLn $ "no ARP routes installed on dev " ++ dev ++ " - retrying in 10 seconds"
+    arpDaemon :: [ Data.IP.IPv4 ] -> String -> IO ()
+    arpDaemon addrs dev = do
+        mapM_ (unsolicitedARP dev) addrs
         threadDelay 10000000
-        processUnnumberedInterface' lb dev
-    else putStrLn $ "ARP routes installed on dev " ++ dev ++ " : " ++ show matchingRoutes
-
-makeLoopbackAddress ip = read lb where
-    ip' = show ip
-    host = reverse $ takeWhile ('.' /=) $ reverse ip'
-    lb = "172.16.100." ++ host
+        arpDaemon addrs dev
+    
+    processInterface' addrs dev = do
+        routes <- getDevARPTable dev
+        devRoutes <- getDevRoutes dev
+        let missingRoutes = routes \\ devRoutes
+            matchingRoutes = routes `intersect` devRoutes
+        putStrLn $ "processInterface: " ++ show dev ++ " - " ++ show routes
+        mapM_ (addHostRoute dev) missingRoutes
+        if null matchingRoutes then do
+            putStrLn $ "no ARP routes installed on dev " ++ dev ++ " - retrying in 10 seconds"
+            threadDelay 10000000
+            processInterface' addrs dev
+        else putStrLn $ "ARP routes installed on dev " ++ dev ++ " : " ++ show matchingRoutes
