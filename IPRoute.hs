@@ -81,6 +81,17 @@ getLoopbackAddress = do
     let raw' = words raw
     return $ if 3 > (length raw') then Nothing else Just (read $ takeWhile ('/' /=) $ raw' !! 3)  
 
+
+getLoopbackAddresses :: IO [ IPv4 ]
+getLoopbackAddresses = do
+    -- first word is the interface name, second word is the interface state
+    -- all others should be valid addresses with subnet length
+    raw <- readProcess "ip" ["-4" , "-br" , "address" , "show" , "dev" , "lo"] ""
+    return $ map ( fst . addrRangePair) $ filter slash32 $ map read $ drop 2 $ words raw
+    where
+    slash32 :: Addr a => AddrRange a -> Bool
+    slash32 ar = (32 ==) $ snd $ addrRangePair ar
+
 getNumberedInterfaces :: IO [String]
 getNumberedInterfaces = fmap (map  ( head . words ) . lines ) $ readProcess "ip" ["-4" , "-br" , "addr"] "" 
 
