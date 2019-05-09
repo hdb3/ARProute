@@ -4,15 +4,19 @@ import Control.Monad(mapM_,unless)
 import Control.Concurrent
 import Data.List((\\))
 import qualified Data.IP
+import System.IO(hFlush,stdout)
 
 seconds :: Int
 seconds = 1000000
 
 main :: IO ()
 main = do 
+    putStrLn "ARPRouter starting"
     nonLoopbackInterfaces <- filter ( "lo" /= ) <$> getAllInterfaces
 
     arpAccept
+
+    putStrLn $ "ARPRouter managing interfaces: " ++ unwords nonLoopbackInterfaces
     run [] nonLoopbackInterfaces
     putStrLn "Done"
 
@@ -34,6 +38,7 @@ run loopbackAddresses interfaces = do
     mapM_ processDevice interfaces
 
     -- and pause before starting again
+    hFlush stdout
     threadDelay (10 * seconds)
     run currentLoopbackAddresses interfaces
 
