@@ -17,6 +17,7 @@ main = do
     arpAccept
 
     putStrLn $ "ARPRouter managing interfaces: " ++ unwords nonLoopbackInterfaces
+    hFlush stdout
     run [] nonLoopbackInterfaces
     putStrLn "Done"
 
