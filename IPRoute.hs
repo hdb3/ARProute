@@ -17,7 +17,7 @@ addHostRoute dev ip = do
 
 getARPTable :: IO [(String,IPv4)]
 getARPTable = do
-    rawNeighbours <- readProcess "ip" ["neigh"] ""
+    rawNeighbours <- readProcess "ip" ["-4" , "neigh"] ""
     let parseNeighbours s = if "lladdr" == (parts !! 3) then Just (parts !! 2, read $ head parts :: IPv4) else Nothing where
             parts = words s
     return $ Data.Maybe.mapMaybe parseNeighbours ( lines rawNeighbours )
