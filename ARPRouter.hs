@@ -8,37 +8,20 @@ import qualified Data.IP
 seconds = 1000000 :: Int
 
 main = do 
-    numberedInterfaces <- getNumberedInterfaces
-    print ("numberedInterfaces",numberedInterfaces)
-    interfaces <- getAllInterfaces
-    print ("interfaces",interfaces)
-    let nonLoopbackInterfaces = filter ( "lo" /= ) interfaces
-    physicalInterfaces <- getPhysicalInterfaces
-    print ("physicalInterfaces",physicalInterfaces)
-    unnumberedInterfaces <- getUnnumberedInterfaces
-    print ("unnumberedInterfaces",unnumberedInterfaces)
-    arpTable <- getARPTable_
-    print ("arpTable",arpTable)
+    nonLoopbackInterfaces <- filter ( "lo" /= ) <$> getAllInterfaces
 
     arpAccept
     run [] nonLoopbackInterfaces
-    --loopbackAddresses <- getLoopbackAddresses
-    --putStrLn $ "advertising " ++ show loopbackAddresses ++ " on " ++ show nonLoopbackInterfaces
-    --mapM_ ( processInterface loopbackAddresses) nonLoopbackInterfaces
-    --stall
-
-    --where
-    --stall = threadDelay (1000 * seconds) >> stall
+    putStrLn "Done"
 
 run :: [ Data.IP.IPv4 ] -> [ String ] -> IO()
 run loopbackAddresses interfaces = do
-
     -- first get the current list of addresses to advertise
     currentLoopbackAddresses <- getLoopbackAddresses
-    let newLoopbackAddresses = currentLoopbackAddresses \\ newLoopbackAddresses
+    let newLoopbackAddresses = currentLoopbackAddresses \\ loopbackAddresses
     unless (null newLoopbackAddresses)
          (putStrLn $ "added loopback addresses: " ++ unwords ( map show newLoopbackAddresses ))
-    let removedLoopbackAddresses = currentLoopbackAddresses \\ loopbackAddresses
+    let removedLoopbackAddresses = loopbackAddresses \\ currentLoopbackAddresses
     unless (null removedLoopbackAddresses)
          (putStrLn $ "removed loopback addresses: " ++ unwords ( map show removedLoopbackAddresses ))
 
@@ -48,6 +31,7 @@ run loopbackAddresses interfaces = do
 
     -- and pause before starting again
     threadDelay (10 * seconds)
+    --run loopbackAddresses interfaces
     run currentLoopbackAddresses interfaces
 
     where
@@ -71,32 +55,3 @@ run loopbackAddresses interfaces = do
         unless (null missingRoutes)
                ( do putStrLn $ "processDevice: " ++ show dev ++ " adding routes " ++ unwords (map show missingRoutes)
                     mapM_ (addHostRoute dev) missingRoutes)
-
-processInterface :: [ Data.IP.IPv4 ] -> String -> IO ThreadId
-processInterface addrs dev = do
-    putStrLn $ "processInterface - loopback address advertised: " ++ show addrs
-    interfaceUp dev
-    forkIO (arpDaemon addrs dev)
-    forkIO (processInterface' dev)
-
-    where
-
-    arpDaemon :: [ Data.IP.IPv4 ] -> String -> IO ()
-    arpDaemon addrs dev = do
-        mapM_ (unsolicitedARP dev) addrs
-        threadDelay (10 * seconds)
-        arpDaemon addrs dev
-
-processInterface' :: String -> IO ()    
-processInterface' dev = do
-    routes <- getDevARPTable dev
-    devRoutes <- getDevRoutes dev
-    let missingRoutes = routes \\ devRoutes
-        matchingRoutes = routes `intersect` devRoutes
-    putStrLn $ "processInterface: " ++ show dev ++ " - " ++ show routes
-    mapM_ (addHostRoute dev) missingRoutes
-    if null matchingRoutes then do
-        putStrLn $ "no ARP routes installed on dev " ++ dev ++ " - retrying in 10 seconds"
-        threadDelay (10 * seconds)
-        processInterface' dev
-    else putStrLn $ "ARP routes installed on dev " ++ dev ++ " : " ++ show matchingRoutes

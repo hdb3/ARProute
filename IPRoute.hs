@@ -2,6 +2,7 @@ module IPRoute where
 import System.Process
 import Data.List(intersect,sortOn,(\\))
 import Data.Ord(comparing)
+import Text.Read(readMaybe)
 import Data.IP
 import qualified Data.Maybe
 import Control.Monad(when,void)
@@ -23,7 +24,7 @@ getARPTable = do
     return $ Data.Maybe.mapMaybe parseNeighbours ( lines rawNeighbours )
 
 getDevRoutes :: String -> IO [IPv4]
-getDevRoutes dev = fmap (map  ( read . head . words ) . lines ) $ readProcess "ip" ["-4" , "-br" , "route", "show", "dev", dev] "" 
+getDevRoutes dev = fmap (Data.Maybe.catMaybes . map  ( readMaybe . head . words ) . lines ) $ readProcess "ip" ["-4" , "-br" , "route", "show", "dev", dev] "" 
 
 getDevARPTable :: String -> IO [IPv4]
 getDevARPTable dev = do
@@ -37,8 +38,7 @@ getARPTable_ = do
 
 unsolicitedARP :: String -> IPv4 -> IO()
 unsolicitedARP dev ip = do
-    putStrLn $ "arping -A -c 3 -I " ++ dev ++ " -s " ++ show ip ++ " 0.0.0.0"
-    void $ readProcess "arping" ["-A" , "-c" , "3" , "-I" , dev , "-s" , show ip , "0.0.0.0"] ""
+    void $ readProcess "arping" ["-A" , "-c" , "1" , "-I" , dev , "-s" , show ip , "0.0.0.0"] ""
 
 interfaceUp :: String -> IO()
 interfaceUp dev = do
