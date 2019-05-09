@@ -1,12 +1,14 @@
 module Main where
 import IPRoute
-import Control.Monad(mapM_,when,unless)
+import Control.Monad(mapM_,unless)
 import Control.Concurrent
-import Data.List((\\),intersect)
+import Data.List((\\))
 import qualified Data.IP
 
-seconds = 1000000 :: Int
+seconds :: Int
+seconds = 1000000
 
+main :: IO ()
 main = do 
     nonLoopbackInterfaces <- filter ( "lo" /= ) <$> getAllInterfaces
 
@@ -19,8 +21,10 @@ run loopbackAddresses interfaces = do
     -- first get the current list of addresses to advertise
     currentLoopbackAddresses <- getLoopbackAddresses
     let newLoopbackAddresses = currentLoopbackAddresses \\ loopbackAddresses
+
     unless (null newLoopbackAddresses)
          (putStrLn $ "added loopback addresses: " ++ unwords ( map show newLoopbackAddresses ))
+
     let removedLoopbackAddresses = loopbackAddresses \\ currentLoopbackAddresses
     unless (null removedLoopbackAddresses)
          (putStrLn $ "removed loopback addresses: " ++ unwords ( map show removedLoopbackAddresses ))
@@ -31,7 +35,6 @@ run loopbackAddresses interfaces = do
 
     -- and pause before starting again
     threadDelay (10 * seconds)
-    --run loopbackAddresses interfaces
     run currentLoopbackAddresses interfaces
 
     where
@@ -51,7 +54,6 @@ run loopbackAddresses interfaces = do
         routes <- getDevARPTable dev
         devRoutes <- getDevRoutes dev
         let missingRoutes = routes \\ devRoutes
-            matchingRoutes = routes `intersect` devRoutes
         unless (null missingRoutes)
                ( do putStrLn $ "processDevice: " ++ show dev ++ " adding routes " ++ unwords (map show missingRoutes)
                     mapM_ (addHostRoute dev) missingRoutes)

@@ -1,6 +1,5 @@
 module Util where
 import Data.List(sortOn,groupBy)
-import qualified Data.Maybe
 import Data.Ord(comparing)
 
 breakOn :: Eq a => a -> [a] -> [[a]]
