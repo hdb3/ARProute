@@ -1,0 +1,7 @@
+
+Copy the binary () to /usr/sbin
+    cp dist/build/arprouted/arprouted /usr/sbin
+Copy the systemd unit file (arproute.service) to /usr/lib/systemd/system
+    cp arproute.service /usr/lib/systemd/system
+Enable and start the service
+    systemctl enable --now arproute

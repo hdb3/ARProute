@@ -1,11 +1,13 @@
 module Main where
 import IPRoute
-import Control.Monad(mapM_,unless)
+import Control.Monad(mapM_,unless,when)
 import Control.Concurrent
 import Data.List((\\))
 import qualified Data.IP
 import System.IO(hFlush,stdout)
 
+verbose :: Bool
+verbose = True
 seconds :: Int
 seconds = 1000000
 
@@ -48,7 +50,11 @@ run loopbackAddresses interfaces = do
     sendARPs :: [ String ] -> [ Data.IP.IPv4 ] -> IO ()
     sendARPs addresses devices = mapM_ (`sad` devices) addresses
         where
-        sad device = mapM_ (unsolicitedARP device)
+        sad device = mapM_ (unsolicitedARP' device)
+        -- unsolicitedARP :: String -> IPv4 -> IO()
+        unsolicitedARP' dev address = do
+            when verbose ( putStrLn $ "send ARP on " ++ dev ++ " for " ++ show address )
+            unsolicitedARP dev address
 
     -- note/TODO: does not remove addresses which have disappeared from ARP table, which is a problem....
     --            as, unlike ARP, these routes are persistent
@@ -64,6 +70,18 @@ run loopbackAddresses interfaces = do
         let isRoutable addr = any (Data.IP.isMatchedTo addr) devRoutes 
             missingRoutes = filter (not . isRoutable ) routes
         --let missingRoutes = routes \\ devRoutes
+        --putStrLn $ "processDevice: device " ++ show dev
+        when verbose ( do
+             putStrLn $ "processDevice: device \"" ++ dev ++ "\" ARP table [" ++ unwords (map show routes) ++ "]"
+             putStrLn $ "processDevice: device \"" ++ dev ++ "\" route table [" ++ unwords (map show devRoutes) ++ "]"
+             putStrLn $ "processDevice: device \"" ++ dev ++ "\" missing routes [" ++ unwords (map show missingRoutes) ++ "]")
+
         unless (null missingRoutes)
                ( do putStrLn $ "processDevice: " ++ show dev ++ " adding routes " ++ unwords (map show missingRoutes)
                     mapM_ (addHostRoute dev) missingRoutes)
+
+{-
+ -    Copyright 2019 Nicholas Hart
+ -
+ -       Licensed under the Apache License, Version 2.0
+-}

@@ -1,0 +1,5 @@
+echo "su needed: execute the following commands"
+echo "systemctl disable --now arproute"
+echo "cp arprouted /usr/sbin"
+echo "cp arproute.service /usr/lib/systemd/system"
+echo "systemctl enable --now arproute"
