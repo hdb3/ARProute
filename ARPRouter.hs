@@ -59,7 +59,11 @@ run loopbackAddresses interfaces = do
     processDevice dev = do
         routes <- getDevARPTable dev
         devRoutes <- getDevRoutes dev
-        let missingRoutes = routes \\ devRoutes
+        -- exclude 'normal' ARP entries which lie within routable ranges of interface routes
+        -- i.e. all of the 'normal' arp entries
+        let isRoutable addr = any (Data.IP.isMatchedTo addr) devRoutes 
+            missingRoutes = filter (not . isRoutable ) routes
+        --let missingRoutes = routes \\ devRoutes
         unless (null missingRoutes)
                ( do putStrLn $ "processDevice: " ++ show dev ++ " adding routes " ++ unwords (map show missingRoutes)
                     mapM_ (addHostRoute dev) missingRoutes)

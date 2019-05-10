@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module IPRoute where
 import System.Process
 import Data.List(intersect,(\\))
@@ -22,8 +23,17 @@ getARPTable = do
             parts = words s
     return $ mapMaybe parseNeighbours ( lines rawNeighbours )
 
-getDevRoutes :: String -> IO [IPv4]
-getDevRoutes dev = (mapMaybe ( readMaybe . head . words ) . lines ) <$> readProcess "ip" ["-4" , "-br" , "route", "show", "dev", dev] "" 
+--getDevRoutes :: String -> IO [IPv4]
+--getDevRoutes dev = (mapMaybe ( readMaybe . head . words ) . lines ) <$> readProcess "ip" ["-4" , "-br" , "route", "show", "dev", dev] "" 
+
+getDevRoutes :: String -> IO [(AddrRange IPv4)]
+getDevRoutes dev = (mapMaybe ( readIPRouteRoute . head . words ) . lines ) <$> readProcess "ip" ["-4" , "-br" , "route", "show", "dev", dev] "" 
+    where
+
+    readIPRouteRoute :: String -> Maybe (AddrRange IPv4)
+    readIPRouteRoute "default" = Just "0.0.0.0/0"
+    readIPRouteRoute s | '/' `elem` s = fmap  (`makeAddrRange` 32)( readMaybe s )
+                       | otherwise = readMaybe s
 
 getDevARPTable :: String -> IO [IPv4]
 getDevARPTable dev = do
