@@ -14,18 +14,26 @@ seconds = 1000000
 main :: IO ()
 main = do 
     putStrLn "ARPRouter starting"
-    nonLoopbackInterfaces <- filter ( "lo" /= ) <$> getAllInterfaces
-
     arpAccept
-
-    putStrLn $ "ARPRouter managing interfaces: " ++ unwords nonLoopbackInterfaces
     hFlush stdout
-    run [] nonLoopbackInterfaces
-    putStrLn "Done"
+    run [] []
+    putStrLn "Done (unexpectedly!)"
 
 run :: [ Data.IP.IPv4 ] -> [ String ] -> IO()
 run loopbackAddresses interfaces = do
-    -- first get the current list of addresses to advertise
+
+    -- first get the current list of (active) nonLoopbackInterfaces
+    currentInterfaces <- filter ( "lo" /= ) <$> getAllInterfaces
+    let newInterfaces = currentInterfaces \\ interfaces
+
+    unless (null newInterfaces)
+        (putStrLn $ "added interfaces: " ++ unwords ( map show newInterfaces ))
+
+    let removedInterfaces = interfaces \\ currentInterfaces
+    unless (null removedInterfaces)
+        (putStrLn $ "removed interfaces: " ++ unwords ( map show removedInterfaces ))
+
+    -- now get the current list of addresses to advertise
     currentLoopbackAddresses <- getLoopbackAddresses
     let newLoopbackAddresses = currentLoopbackAddresses \\ loopbackAddresses
 
@@ -35,15 +43,16 @@ run loopbackAddresses interfaces = do
     let removedLoopbackAddresses = loopbackAddresses \\ currentLoopbackAddresses
     unless (null removedLoopbackAddresses)
          (putStrLn $ "removed loopback addresses: " ++ unwords ( map show removedLoopbackAddresses ))
+    hFlush stdout
 
     -- now do the work
     sendARPs interfaces currentLoopbackAddresses
-    mapM_ processDevice interfaces
+    mapM_ processDevice currentInterfaces
+    hFlush stdout
 
     -- and pause before starting again
-    hFlush stdout
     threadDelay (10 * seconds)
-    run currentLoopbackAddresses interfaces
+    run currentLoopbackAddresses currentInterfaces
 
     where
 
