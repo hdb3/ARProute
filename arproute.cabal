@@ -1,7 +1,7 @@
 cabal-version:       2.4
 
 name:                arproute
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            ARProute
                      bindings for some of the functions available in iproute2
                      additionally, ARP routing via arpping
@@ -20,5 +20,12 @@ executable arprouted
   main-is:             ARPRouter.hs
   other-modules:       IPRoute, Util
   other-extensions:    OverloadedStrings
-  build-depends:       base ^>=4.12.0.0, iproute ^>=1.7.7, process ^>=1.6.5.0
+  build-depends:       base ^>=4.12.0, iproute ^>=1.7.7, process ^>=1.6.5
+  default-language:    Haskell2010
+
+executable mesh
+  main-is:             Mesh.hs
+  --other-modules:
+  other-extensions:    OverloadedStrings
+  build-depends:       base ^>=4.12.0
   default-language:    Haskell2010

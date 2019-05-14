@@ -1,6 +1,12 @@
 module VirtMesh where
+{-
+  This preserves more complex code which utilises the domain XML
+  and explict interface NAC addresses.  In the context of this application
+  (simple virtual topology build and destroy), the XML capability is redundant.
+  This source file is reatined in case the need for it emerges in future.
+-}
+
 import System.Process
--- import System.Environment
 import VirtXML
 
 link h1 h2 = let h1h2 = h1 ++ "-" ++ h2
