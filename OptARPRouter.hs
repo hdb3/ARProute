@@ -5,31 +5,36 @@ import Control.Concurrent
 import Data.List((\\))
 import qualified Data.IP
 import System.IO(hFlush,stdout)
+import System.Environment(getArgs)
 
-useUnnumberedInterfaces :: Bool
-useUnnumberedInterfaces = True
-
-createLoopbackAddress :: Bool
-createLoopbackAddress = False
-
-verbose :: Bool
-verbose = True
 seconds :: Int
 seconds = 1000000
 
 main :: IO ()
-main = do 
-    putStrLn "ARPRouter starting"
-    arpAccept
-    hFlush stdout
-    loopbackAddreses <- if createLoopbackAddress then makeLoopbackAddress else return []
-    run loopbackAddreses []
-    putStrLn "Done (unexpectedly!)"
-    where
-    makeLoopbackAddress = ( read . ("172.31.100." ++) . reverse . takeWhile ('.' /=) . reverse . show ) <$> getLocalAddress
+main = do
 
-run :: [ Data.IP.IPv4 ] -> [ String ] -> IO()
-run loopbackAddresses interfaces = do
+    args <- getArgs
+    if "--help" `elem` args then do
+        putStrLn "arprouter: options:"
+        putStrLn "                   --lb : createLoopbackAddress"
+        putStrLn "                   --uu : useUnnumberedInterfaces"
+        putStrLn "                   --v  : verbose"
+    else do
+        let createLoopbackAddress = "--lb" `elem` args
+            useUnnumberedInterfaces = "--uu" `elem` args
+            verbose =  "--v" `elem` args
+
+        putStrLn "arprouter starting"
+        arpAccept
+        hFlush stdout
+        loopbackAddresses <- if createLoopbackAddress then makeLoopbackAddress else return []
+        run useUnnumberedInterfaces createLoopbackAddress verbose loopbackAddresses []
+
+        where
+            makeLoopbackAddress = ( read . ("172.31.100." ++) . reverse . takeWhile ('.' /=) . reverse . show ) <$> getLocalAddress
+
+run :: Bool -> Bool -> Bool -> [ Data.IP.IPv4 ] -> [ String ] -> IO()
+run useUnnumberedInterfaces createLoopbackAddress verbose loopbackAddresses interfaces = do
 
     -- first get the current list of (active) nonLoopbackInterfaces
     currentInterfaces <- if useUnnumberedInterfaces then getUnnumberedInterfaces
@@ -59,18 +64,18 @@ run loopbackAddresses interfaces = do
     hFlush stdout
 
     -- now do the work
-    sendARPs interfaces currentLoopbackAddresses
-    mapM_ processDevice currentInterfaces
+    sendARPs verbose interfaces currentLoopbackAddresses
+    mapM_ (processDevice verbose) currentInterfaces
     hFlush stdout
 
     -- and pause before starting again
     threadDelay (10 * seconds)
-    run currentLoopbackAddresses currentInterfaces
+    run useUnnumberedInterfaces createLoopbackAddress verbose currentLoopbackAddresses currentInterfaces
 
     where
 
-    sendARPs :: [ String ] -> [ Data.IP.IPv4 ] -> IO ()
-    sendARPs addresses devices = mapM_ (`sad` devices) addresses
+    sendARPs :: Bool -> [ String ] -> [ Data.IP.IPv4 ] -> IO ()
+    sendARPs verbose addresses devices = mapM_ (`sad` devices) addresses
         where
         sad device = mapM_ (unsolicitedARP' device)
         -- unsolicitedARP :: String -> IPv4 -> IO()
@@ -83,13 +88,13 @@ run loopbackAddresses interfaces = do
     --            The solution is to either mark ou routes (who else is making /32s?), or record
     --            the routes we create and remove them when they go, which involves more state than we have here...
     --            solution is to make a thread for each device and pass state within
-    processDevice :: String -> IO ()    
-    processDevice dev = do
+    processDevice :: Bool -> String -> IO ()
+    processDevice verbose dev = do
         routes <- getDevARPTable dev
         devRoutes <- getDevRoutes dev
         -- exclude 'normal' ARP entries which lie within routable ranges of interface routes
         -- i.e. all of the 'normal' arp entries
-        let isRoutable addr = any (Data.IP.isMatchedTo addr) devRoutes 
+        let isRoutable addr = any (Data.IP.isMatchedTo addr) devRoutes
             missingRoutes = filter (not . isRoutable ) routes
         --let missingRoutes = routes \\ devRoutes
         --putStrLn $ "processDevice: device " ++ show dev
