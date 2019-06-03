@@ -4,7 +4,7 @@ import qualified Data.ByteString.Lazy as L
 import Data.IP
 import Data.Aeson
 import System.Exit(die)
-import Data.Aeson.IP
+import Data.Aeson.IP()
 
 data AddressRecord = AddressRecord { ipAddress :: IPv4
                                    , macAddress :: String
@@ -12,6 +12,7 @@ data AddressRecord = AddressRecord { ipAddress :: IPv4
                                    } deriving Show
 
 {-
+{- LANGUAGE RecordWildCards -}
 instance FromJSON AddressRecord where
   parseJSON = withObject "AddressRecord" $ \o -> do
     ipAddress   <- o .: "ip-address"
@@ -31,5 +32,5 @@ mac2AddressRecords :: String -> IO [AddressRecord]
 mac2AddressRecords mac = do
    f <- L.readFile "/var/lib/libvirt/dnsmasq/virbr0.status"
    either (\s -> die $ "failed to parse input : " ++ s)
-          ( \recs -> return $ filter ( (mac ==) . macAddress) recs )
+          (return . filter ((mac ==) . macAddress))
           ( eitherDecode f) 

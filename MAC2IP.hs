@@ -1,7 +1,5 @@
 module Main where
-import qualified Data.ByteString.Lazy as L
 import System.Environment(getArgs)
-import Data.Aeson(eitherDecode)
 import System.Exit(die)
 import LibvirtIP
 
@@ -13,8 +11,8 @@ main = do
     else do
         res <- mac2AddressRecords $ head args
         if null res then
-            die $ "no match"
+            die "no match"
         else if 1 == length res then
-            putStrLn $ show $ ipAddress $ head res
+            print (ipAddress $ head res)
         else
-            die $ "multiple matches found: " ++ unwords ( map show $ map ipAddress res )
+            die $ "multiple matches found: " ++ unwords ( map (show . ipAddress) res )

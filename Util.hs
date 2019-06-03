@@ -14,6 +14,4 @@ aggregatePairs cmp = map rollUp . aggregate cmp where
     rollUp t = (fst $ head t, map snd t)
 
 aggregate :: Ord b => (a -> b) -> [a] -> [[a]]
-aggregate cmp = groupBy cmp' . sortOn cmp where cmp' a b = (EQ ==) $ ( comparing cmp ) a b
---aggregate cmp = groupBy cmp' . sortOn cmp where cmp' = (EQ ==) . comparing . cmp -- how make point free work?????
-                                                                                   -- never when the function has more than one parameter??
+aggregate cmp = groupBy cmp' . sortOn cmp where cmp' a b = (EQ ==) $ comparing cmp a b

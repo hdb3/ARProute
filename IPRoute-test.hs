@@ -16,7 +16,7 @@ main = do
     print ("arpTable",arpTable)
 
     putStrLn "\nunnumbered interface ARP table\n  ------"
-    let unnumberedARP = map (\dev -> lookup dev arpTable) unnumberedInterfaces
+    let unnumberedARP = map (`lookup` arpTable) unnumberedInterfaces
     print unnumberedARP
     arpAccept
     loopbackAddress <- getLoopbackAddress

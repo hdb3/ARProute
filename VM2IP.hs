@@ -19,4 +19,4 @@ main = do
         if 1 /= length recs then
             die "fail"
         else
-            putStrLn $ show $ ipAddress $ head recs
+            print (ipAddress $ head recs)
