@@ -14,7 +14,7 @@ main = do
     else do
         xml <- readProcess "virsh" ["dumpxml" , head args] ""
         let mac = getNetworkInterfaceMAC xml
-        putStrLn $ "MAC found: " ++ mac
+        --putStrLn $ "MAC found: " ++ mac
         recs <- mac2AddressRecords mac
         if 1 /= length recs then
             die "fail"
