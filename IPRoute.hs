@@ -23,10 +23,7 @@ getARPTable = do
             parts = words s
     return $ mapMaybe parseNeighbours ( lines rawNeighbours )
 
---getDevRoutes :: String -> IO [IPv4]
---getDevRoutes dev = (mapMaybe ( readMaybe . head . words ) . lines ) <$> readProcess "ip" ["-4" , "-br" , "route", "show", "dev", dev] "" 
-
-getDevRoutes :: String -> IO [(AddrRange IPv4)]
+getDevRoutes :: String -> IO [AddrRange IPv4]
 getDevRoutes dev = (mapMaybe ( readIPRouteRoute . head . words ) . lines ) <$> readProcess "ip" ["-4" , "-br" , "route", "show", "dev", dev] "" 
     where
 
