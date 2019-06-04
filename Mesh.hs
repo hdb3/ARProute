@@ -1,17 +1,34 @@
 module Main where
 import System.Environment(getArgs)
+import qualified Data.List
+import Control.Monad(when,unless)
+import System.Process(callCommand)
+import System.Exit(die)
 
 main = do
-    hx <- getArgs
-    if null hx then do
-        putStrLn "Mesh: generate virsh commands to build a network mesh for libvirt systems"
-        putStrLn "      provide two or more VM names as input parameters...."
-    else do
-        let makeMesh l = [(i,j) | i<-l, j<-l, i<j]
-        let 
-            links = map (uncurry unlink) (makeMesh hx)
-            unlinks = map (uncurry unlink) (makeMesh hx)
+    args <- getArgs
+    let (opts,hx) = Data.List.partition (Data.List.isPrefixOf "--") args
+    when ( null hx )
+         (die "Mesh: generate virsh commands to build a network mesh for libvirt systems\n\
+              \      provide two or more VM names as input parameters...." )
+
+
+    let makeMesh l = [(i,j) | i<-l, j<-l, i<j]
+        links = map (uncurry link) (makeMesh hx)
+        unlinks = map (uncurry unlink) (makeMesh hx)
+
+    if "--create" `elem` opts then do
         putStrLn $ unlines links
+        unless ("--dryrun" `elem` opts)
+               ( callCommand $ unlines links )
+    else if "--delete" `elem` opts then do
+        putStrLn $ unlines unlinks
+        unless ("--dryrun" `elem` opts)
+               ( callCommand $ unlines unlinks )
+    else do
+        putStrLn "** create script **"
+        putStrLn $ unlines links
+        putStrLn "** delete script **"
         putStrLn $ unlines unlinks
 
     where
@@ -19,12 +36,12 @@ main = do
     
     link h1 h2 = let h1h2 = h1 ++ "-" ++ h2
                      h2h1 = h2 ++ "-" ++ h1
-                     cmdVeth   = "ip link add dev " ++ h1h2 ++ " type veth peer name " ++ h2h1
-                     cmdVirsh h veth = "virsh attach-interface " ++ h ++ " direct " ++ veth ++ " --target=macvtap --model virtio"
+                     cmdVeth   = "sudo ip link add dev " ++ h1h2 ++ " type veth peer name " ++ h2h1
+                     cmdVirsh h veth = "sudo virsh attach-interface " ++ h ++ " direct " ++ veth ++ " --target=macvtap --model virtio"
                  in unlines [cmdVeth, cmdVirsh h1 h1h2, cmdVirsh h2 h2h1]
     
     unlink h1 h2 =
-         let cmdVeth = "ip link del dev " ++ h1 ++ "-" ++ h2
-             cmdVirsh h = "virsh detach-interface " ++ h ++ " direct "
+         let cmdVeth = "sudo ip link del dev " ++ h1 ++ "-" ++ h2
+             cmdVirsh h = "sudo virsh detach-interface " ++ h ++ " direct "
          in unlines [cmdVirsh h1 ,cmdVirsh h2 ,cmdVeth]
     
