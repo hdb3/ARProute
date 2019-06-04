@@ -5,5 +5,14 @@ echo "virsh vol-clone --pool $pool $sourceimage ${vm}.qcow2"
 virsh vol-clone --pool $pool $sourceimage ${vm}.qcow2
 echo "virt-install --name $vm --memory $memsize --vcpus $cpucount --disk ${vm}.qcow2 --import --os-variant rhel7 --noautoconsole"
 virt-install --name $vm --memory $memsize --vcpus $cpucount --disk vol=$pool/${vm}.qcow2 --import --os-variant rhel7 --noautoconsole
-echo "IP for $vm is `./vm2ip $vm` "
-./vm2ip $vm
+export remoteip=`./vm2ip $vm`
+echo "IP for $vm is $remoteip"
+#echo "IP for $vm is `./vm2ip $vm` "
+ssh centos@${remoteip} sudo yum -y update 
+ssh centos@${remoteip} sudo yum -y install docker
+scp docker-network centos@${remoteip}:
+ssh centos@${remoteip} sudo mv docker-network /etc/sysconfig/docker-network
+ssh centos@${remoteip} sudo systemctl enable --now docker
+ssh centos@${remoteip} sudo docker info
+DOCKER_HOST=${remoteip} docker info
+
