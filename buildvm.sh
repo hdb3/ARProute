@@ -14,7 +14,5 @@ ssh centos@${vm} sudo install -D daemon.json /etc/docker/daemon.json
 ssh centos@${vm} sudo systemctl enable --now docker
 ssh centos@${vm} sudo docker info
 DOCKER_HOST=${vm} docker info
-scp arproute/arprouted arproute/arproute.service centos@${vm}:
-ssh centos@${vm} sudo mv arprouted /usr/sbin
-ssh centos@${vm} sudo mv arproute.service /usr/lib/systemd/system
-ssh centos@${vm} sudo systemctl enable --now arproute
+scp arproute.tgz centos@${vm}:
+ssh centos@${vm} "tar xzf arproute.tgz && sudo mv arprouted /usr/sbin && sudo mv arproute.service /usr/lib/systemd/system && sudo systemctl enable --now arproute"

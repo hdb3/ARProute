@@ -1,7 +1,7 @@
 cabal-version:       2.4
 
 name:                arproute
-version:             0.1.1.0
+version:             0.1.2.0
 synopsis:            ARProute
                      bindings for some of the functions available in iproute2
                      additionally, ARP routing via arpping

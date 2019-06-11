@@ -90,11 +90,12 @@ getNumberedInterfaces = (map  ( head . words ) . lines ) <$> readProcess "ip" ["
 getAllInterfaces :: IO [String]
 getAllInterfaces = map ( takeWhile ('@' /=) . head . words ) . lines <$> readProcess "ip" ["-br" , "link", "show" , "up"] "" 
 
-getPhysicalInterfaces :: IO [String]
-getPhysicalInterfaces = do
+getPhysicalInterfaces :: Bool -> IO [String]
+getPhysicalInterfaces up = do
     let sections = map words . breakOn '\\'
+        ipLinkOptions = if up then ["-d" , "-o" , "link", "show" , "up"] else  ["-d" , "-o" , "link", "show"]
     -- break up the interface details into word level nested array
-    interfaceDetails <- ( map sections . lines) <$> readProcess "ip" ["-d" , "-o" , "link", "show" , "up"] ""
+    interfaceDetails <- ( map sections . lines) <$> readProcess "ip" ipLinkOptions ""
     -- filter: 1) on number of 'lines' on an interface detail - simple interfaces don't additional lines to specify the sub-type such as bridge / macvtab / tun / etc
     --         2) to remove the loopback interface and any other odd ones other than real ethernet...
     -- then finally trim down the output to just field #2 line 1 which is the interface name (lots else available e.g. MAC, ifindex, state, but it is not needed so for simplicity just do this only)
@@ -103,12 +104,12 @@ getPhysicalInterfaces = do
 
 getUnnumberedInterfaces :: IO [String]
 getUnnumberedInterfaces = do 
-    physical <- getPhysicalInterfaces
+    physical <- getPhysicalInterfaces False -- include interfaces which are down
     numbered <- getNumberedInterfaces
     return $ physical \\ numbered
 
 getPhysicalNumberedInterfaces :: IO [String]
 getPhysicalNumberedInterfaces = do 
-    physical <- getPhysicalInterfaces
+    physical <- getPhysicalInterfaces True -- only get interfaces which are 'UP'
     numbered <- getNumberedInterfaces
     return $ physical `intersect` numbered
