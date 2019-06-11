@@ -5,6 +5,7 @@ import Control.Monad(when,unless)
 import System.Process(callCommand)
 import System.Exit(die)
 
+useBrctl = True
 main = do
     args <- getArgs
     let (opts,hx) = Data.List.partition (Data.List.isPrefixOf "--") args
@@ -12,6 +13,7 @@ main = do
          (die "Mesh: generate virsh commands to build a network mesh for libvirt systems\n\
               \      provide two or more VM names as input parameters...." )
 
+    let (link,unlink) = if useBrctl then (brLink,brUnlink) else (vethLink,vethUnlink)
 
     let makeMesh l = [(i,j) | i<-l, j<-l, i<j]
         links = map (uncurry link) (makeMesh hx)
@@ -33,15 +35,23 @@ main = do
 
     where
     
+    brLink h1 h2 = let brName = "br" ++ h1 ++ h2
+                       cmdAddBr   = "sudo brctl addbr " ++ brName
+                       cmdSetUpBr   = "sudo ip link set up dev " ++ brName
+                       cmdVirsh h = "sudo virsh attach-interface " ++ h ++ " bridge " ++ brName
+                 in unlines [cmdAddBr , cmdSetUpBr, cmdVirsh h1 , cmdVirsh h2 ]
     
-    link h1 h2 = let h1h2 = h1 ++ "-" ++ h2
-                     h2h1 = h2 ++ "-" ++ h1
-                     cmdVeth   = "sudo ip link add dev " ++ h1h2 ++ " type veth peer name " ++ h2h1
-                     cmdVirsh h veth = "sudo virsh attach-interface " ++ h ++ " direct " ++ veth ++ " --target=macvtap --model virtio"
+    vethLink h1 h2 = let h1h2 = h1 ++ "-" ++ h2
+                         h2h1 = h2 ++ "-" ++ h1
+                         cmdVeth   = "sudo ip link add dev " ++ h1h2 ++ " type veth peer name " ++ h2h1
+                         cmdVirsh h veth = "sudo virsh attach-interface " ++ h ++ " direct " ++ veth ++ " --target=macvtap --model virtio"
                  in unlines [cmdVeth, cmdVirsh h1 h1h2, cmdVirsh h2 h2h1]
     
-    unlink h1 h2 =
-         let cmdVeth = "sudo ip link del dev " ++ h1 ++ "-" ++ h2
-             cmdVirsh h = "sudo virsh detach-interface " ++ h ++ " direct "
+    vethUnlink h1 h2 = let cmdVeth = "sudo ip link del dev " ++ h1 ++ "-" ++ h2
+                           cmdVirsh h = "sudo virsh detach-interface " ++ h ++ " direct"
          in unlines [cmdVirsh h1 ,cmdVirsh h2 ,cmdVeth]
     
+    brUnlink h1 h2 = let brName = "br" ++ h1 ++ h2
+                         cmdBrctl   = "sudo brctl delbr " ++ brName
+                         cmdVirsh h = "sudo virsh detach-interface " ++ h ++ " bridge"
+         in unlines [cmdVirsh h1 ,cmdVirsh h2 ,cmdBrctl]
