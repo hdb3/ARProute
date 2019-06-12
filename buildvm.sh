@@ -4,7 +4,8 @@ virsh vol-clone --pool $pool $sourceimage ${vm}
 virt-install --name $vm --memory $memsize --vcpus $cpucount --disk vol=$pool/${vm} --import --os-variant rhel7 --noautoconsole
 export remoteip=`vm2ip $vm`
 echo "IP for $vm is $remoteip"
-printf "server big 8053 \n update add ${vm}.virt 86400 A ${remoteip} \n send\n" | nsupdate
+printf "server localdns 8053 \n update del ${vm}.virt \n send \n answer \n" | nsupdate
+printf "server localdns 8053 \n update add ${vm}.virt 86400 A ${remoteip} \n send \n answer \n" | nsupdate
 fping ${vm}.virt
 ssh centos@${vm} sudo yum -y check-update || echo "non-zero return ignored"
 ssh centos@${vm} sudo "curl -fsSL https://get.docker.com/ | sh"
@@ -15,4 +16,4 @@ ssh centos@${vm} sudo systemctl enable --now docker
 ssh centos@${vm} sudo docker info
 DOCKER_HOST=${vm} docker info
 scp arproute.tgz centos@${vm}:
-ssh centos@${vm} "tar xzf arproute.tgz && sudo mv arprouted /usr/sbin && sudo mv arproute.service /usr/lib/systemd/system && sudo systemctl enable --now arproute"
+ssh centos@${vm} "tar xzf arproute.tgz && sudo install arproute/arprouted /usr/sbin && sudo install arproute/arproute.service /usr/lib/systemd/system && sudo systemctl enable --now arproute"
