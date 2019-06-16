@@ -52,6 +52,7 @@ main = do
          in unlines [cmdVirsh h1 ,cmdVirsh h2 ,cmdVeth]
     
     brUnlink h1 h2 = let brName = "br" ++ h1 ++ h2
+                         cmdSetDownBr   = "sudo ip link set down dev " ++ brName
                          cmdBrctl   = "sudo brctl delbr " ++ brName
                          cmdVirsh h = "sudo virsh detach-interface " ++ h ++ " bridge"
-         in unlines [cmdVirsh h1 ,cmdVirsh h2 ,cmdBrctl]
+         in unlines [cmdVirsh h1 ,cmdVirsh h2 , cmdSetDownBr, cmdBrctl]
