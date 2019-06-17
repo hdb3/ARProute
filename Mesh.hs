@@ -35,8 +35,8 @@ main = do
 
     where
     
-    brLink h1 h2 = let brName = "br" ++ h1 ++ h2
-                       cmdAddBr   = "sudo brctl addbr " ++ brName
+    brLink h1 h2 = let brName = "b" ++ h1 ++ h2
+                       cmdAddBr   = if 15 > length brName then error "can't make an interface name longer than 15" else "sudo brctl addbr " ++ brName
                        cmdSetUpBr   = "sudo ip link set up dev " ++ brName
                        cmdVirsh h = "sudo virsh attach-interface " ++ h ++ " bridge " ++ brName
                  in unlines [cmdAddBr , cmdSetUpBr, cmdVirsh h1 , cmdVirsh h2 ]
@@ -51,7 +51,7 @@ main = do
                            cmdVirsh h = "sudo virsh detach-interface " ++ h ++ " direct"
          in unlines [cmdVirsh h1 ,cmdVirsh h2 ,cmdVeth]
     
-    brUnlink h1 h2 = let brName = "br" ++ h1 ++ h2
+    brUnlink h1 h2 = let brName = "b" ++ h1 ++ h2
                          cmdSetDownBr   = "sudo ip link set down dev " ++ brName
                          cmdBrctl   = "sudo brctl delbr " ++ brName
                          cmdVirsh h = "sudo virsh detach-interface " ++ h ++ " bridge"
